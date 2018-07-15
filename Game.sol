@@ -24,7 +24,7 @@ contract Game {
         address inBattle;
         mapping(uint => bool) objects;
         bool alive;
-        string moveHash;
+        bytes32 moveHash;
     }
 
     uint constant public mapBoundary = 10;
@@ -99,7 +99,7 @@ contract Game {
         gameActive = true;
     }
 
-    function initiateBattle(address opponentAdd, string hashOfMove) public {
+    function initiateBattle(address opponentAdd, bytes32 hashOfMove) public {
         Player storage initiator = players[playerIndex[msg.sender]];
         Player storage personToAttack = players[playerIndex[opponentAdd]];
         require(initiator.location == personToAttack.location);
@@ -109,13 +109,16 @@ contract Game {
     }
 
     function startBattle(uint[] moves) public {
-        Player storage respondent = players[playerIndex[msg.sender]];
-        Player storage initiator = players[playerIndex[respondent.opponentAddress]];
+        Player storage defender = players[playerIndex[msg.sender]];
+        Player storage initiator = players[playerIndex[defender.opponentAddress]];
         require(initiator.opponentAddress == msg.sender);
-        bytes memory hashSubmitted = bytes(initiator.moveHash); // Uses memory
-        if (hashSubmitted.length == 0) {
-            address newBattle = new Battle(msg.sender, moves, initiator.playerAddress, initiator.moveHash);
-            respondent.inBattle = newBattle;
+        if (!(initiator.moveHash.length == 0)) {
+            address newBattle = new Battle(initiator.playerAddress,
+                initiator.moveHash,
+                defender.playerAddress,
+                moves,
+                this);
+            defender.inBattle = newBattle;
             initiator.inBattle = newBattle;
         }
     }
@@ -124,21 +127,38 @@ contract Game {
 contract Battle{
 
     uint public battleSize = 7;
-    address public player1;
-    string public player1hash;
-    string public player1Moves;
-    address public player2;
-    string public player2hash;
-    string public player2Moves;
+    address public initiator;
+    bytes32 public initiatorHash;
+    uint[] public initiatorMoves;
+    uint public initiatorLocationY;
+    uint public initiatorLocationX;
+    address public defender;
+    bytes32 public defenderHash;
+    uint[] public defenderMoves;
+    uint public defenderLocationX;
+    uint public defenderLocationY;
+    uint public turnNumber;
+    Game public game;
 
-    constructor(address playerOne,
-        uint[] moves,
-        address playerTwo,
-        string playerTwoHash) public {
-        player1 = playerOne;
-        player1Moves = player1hash;
-        player2 = playerTwo;
-        player2Moves = player2hash;
+    constructor(address _initiator,
+        bytes32 _initiatorHash,
+        address _defender,
+        uint[] defenderMoves,
+        address _game)
+    public {
+        initiator = _initiator;
+        initiatorHash = _initiatorHash;
+        initiatorLocationY = generateStartingLocation();
+        initiatorLocationX = generateStartingLocation();
+        defenderLocationY = generateStartingLocation();
+        defenderLocationX = generateStartingLocation();
     }
 
+    function verifyMove(uint[] _moves, bytes32 hashToCompare) returns (bool){
+        return keccak256(abi.encodePacked(_moves)) == hashToCompare;
+    }
+
+    function generateStartingLocation() public returns (uint) {
+        return 10 ; // need to fix keccak256(abi.encodePacked(block.difficulty, now)) % battleSize;
+    }
 }
