@@ -5,7 +5,7 @@ contract GameFactory{
     address[] public deployedGames;
 
     function startGame(uint buyInAmount) public {
-        address newGame = new Game(msg.sender);
+        address newGame = new Game(msg.sender, buyInAmount);
         deployedGames.push(newGame);
     }
 
@@ -17,31 +17,50 @@ contract GameFactory{
 contract Game {
 
     struct Player {
-        bool[] inventory;
         uint location;
         address playerAddress;
-        mapping(address => uint) playerID;
+        mapping(uint => bool) objects;
+        bool inBattle;
+        bool alive;
     }
 
-    uint constant mapBoundary = 5;
-    uint constant buyInAmount = 100;
-    uint constant numberOfPlayers = 4;
+    uint constant mapBoundary = 10;
+    uint buyInAmount;
+    uint playerCount;
     Player[] public players;
     mapping(address => bool) isPlayer;
-    mapping(uint => uint) objects;
 
-    constructor(address creator) public {
+    constructor(address creator, uint amount) public {
         isPlayer[creator] = true;
+        buyInAmount = amount;
+        Player memory newPlayer = ({
+        location: 0,
+        playerAddress: creator,
+        inBattle: false,
+        alive: true
+        });
+        players.push(newPlayer);
     }
 
     function joinGame() public payable {
         require(msg.value == buyInAmount);
         isPlayer[msg.sender] = true;
+        Player memory newPlayer = ({
+        location: 0,
+        playerAddress: msg.sender,
+        inBattle: false,
+        alive: true
+        })
+        players.push(newPlayer);
     }
 
-    function generateObjects() private view {
-        randomLocation = (random() % mapBoundary * 10) + random() % mapBoundary;
-        objects[randomLocation] = random() % 4 + 1;
+
+    function generateRandomObjects() private view returns (uint) {
+        return(random() % mapBoundary * 10) + random() % mapBoundary;
+    }
+
+    function generateRandomLocation() private view returns (uint) {
+        return random() % 4 + 1;
     }
 
     function random() private view returns (uint) {
@@ -50,6 +69,34 @@ contract Game {
                 players[1].playerAddress,
                 players[2].playerAddress,
                 players[3].playerAddress)));
+    }
+
+
+}
+
+contract Battle{
+
+    uint battleSize = 7;
+    address player1;
+    bool[] player1Weapons;
+    string player1Moves;
+    address player2;
+    bool[] player2Weapons;
+    string player2Moves;
+    uint objectLocation;
+    uint object;
+
+    constructor
+    (address playerOne, bool[] playerOneWeapons, string player1hash, address playerTwo, bool[] playerTwoWeapons, string player2hash, uint randomObject, uint randomObjectLocation)
+    public {
+        player1 = playerOne;
+        player1Weapons = playerOneWeapons;
+        player1Moves = player1hash;
+        player2 = playerTwo;
+        player2Weapons = playerTwoWeapons;
+        player2Moves = player2hash;
+        objectLocation = randomObjectLocation;
+        object = randomObject;
     }
 
 }
